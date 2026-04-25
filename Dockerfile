@@ -10,7 +10,7 @@ COPY pyproject.toml poetry.lock ./
 
 # Desativa a criação de ambiente virtual e instala as dependências do projeto
 RUN poetry config virtualenvs.create false \
-    && poetry install --only main
+    && poetry install --only main --no-root
 
 # Copia todo o resto do código para dentro da imagem
 COPY . .
