@@ -17,40 +17,43 @@ def diesel_truck_factors():
     )
 
 
-def test_cenario_1_caminhao_pesado_com_tag(engine, diesel_truck_factors):
+def test_calculo_economia_pedagio_simples(engine, diesel_truck_factors):
     """
-    Testa o Given/When/Then do Cenário 1:
-    A engine deve retornar valores zerados para os 'multadores' (desperdícios) se o veículo tiver a tag.
-    """
-    result = engine.calculate_passagem(
-        base_fuel_l=10.0,
-        vehicle_factors=diesel_truck_factors,
-        has_tag=True
-    )
-    
-    assert result.has_tag is True
-    assert result.waste_co2_kg == 0.0
-    assert result.waste_fuel_l == 0.0
-    assert result.paper_used == 0
-    assert result.total_fuel_l == 10.0  # Sem adição de desperdício
-
-
-def test_cenario_2_caminhao_pesado_sem_tag_comparativo(engine, diesel_truck_factors):
-    """
-    Testa o Given/When/Then do Cenário 2:
-    A engine deve computar precisamente a diferença gerada pela ausência da tag e perdas ambientais.
+    Testa o cálculo para 1 caminhão em 1 ocorrência de pedágio (2 minutos).
     """
     savings = engine.calculate_savings(
-        base_fuel_l=10.0,
         vehicle_factors=diesel_truck_factors,
-        idle_time_min=3.0  # 3 Minutos na guarita
+        vehicles_count=1,
+        event_type='toll',
+        occurrences=1
     )
     
-    # Combustível desperdiçado = (3 min * 0.06) + 0.15 extra arranque = 0.33 L
-    assert savings.fuel_saved_l == 0.33
+    # Combustível economizado = (0.06 L/min * 2 min) + 0.15 L = 0.27 L
+    assert savings.fuel_saved_l == 0.27
     
-    # CO2 desperdiçado = (0.33L * 2.68 kg_co2/L) + 0.005 kg do ticket = 0.8844 + 0.005 = 0.8894 kg
-    assert savings.co2_saved_kg == 0.8894
+    # CO2 economizado = 0.27 L * 2.68 kg/L = 0.7236 kg
+    assert savings.co2_saved_kg == 0.7236
     
-    assert savings.paper_saved == 1
-    assert savings.time_saved_min == 3.0
+    assert savings.time_saved_min == 2.0
+
+
+def test_calculo_economia_estacionamento_multiplos_veiculos(engine, diesel_truck_factors):
+    """
+    Testa o cálculo multiplicativo para 5 caminhões com 2 ocorrências de estacionamento (3 minutos).
+    """
+    savings = engine.calculate_savings(
+        vehicle_factors=diesel_truck_factors,
+        vehicles_count=5,
+        event_type='parking',
+        occurrences=2
+    )
+    
+    # Combustível por ocorrência = (0.06 * 3 min) + 0.15 = 0.33 L
+    # Combustível Total = 0.33 L * 5 veículos * 2 ocorrências = 3.3 L
+    assert savings.fuel_saved_l == 3.3
+    
+    # CO2 Total = 3.3 L * 2.68 kg/L = 8.844 kg
+    assert savings.co2_saved_kg == 8.844
+    
+    # Tempo Total = 3 min * 5 veículos * 2 ocorrências = 30.0 min
+    assert savings.time_saved_min == 30.0
