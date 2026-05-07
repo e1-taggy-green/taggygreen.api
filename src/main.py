@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.config import settings
-from src.api.esg import router as esg_router
-from src.api.dashboard import router as dashboard_router
+from src.api.v1.simulador import router as simulador_router
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -20,8 +20,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(esg_router)
-app.include_router(dashboard_router)
+app.include_router(simulador_router)
 
 @app.get("/", tags=["Health Check"])
 async def root() -> dict[str, str]:

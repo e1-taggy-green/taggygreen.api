@@ -1,1 +1,0 @@
-# Este arquivo avisa ao Python que a pasta 'api' é um pacote.
