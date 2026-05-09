@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Float
+from sqlalchemy import Column, Integer, String, ForeignKey, Float, DateTime
+from sqlalchemy.sql import func
 from .base import Base
 
 class Event(Base):
@@ -10,3 +11,4 @@ class Event(Base):
     co2_saved = Column(Float, default=0.0)
     time_saved = Column(Float, default=0.0)
     fuel_saved = Column(Float, default=0.0)
+    created_at = Column(DateTime, default=func.now(), index=True)

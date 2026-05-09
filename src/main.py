@@ -1,15 +1,22 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.config import settings
 from src.api.v1.simulador import router as simulador_router
+from src.database.seed import run_seeder
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    run_seeder()
+    yield
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     description="API para o Motor ESG e Plataformas B2C/B2B do projeto Taggy-Green.",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
