@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.config import settings
 from src.api.v1.esg import router as esg_router
+from src.api.v1.b2b import router as b2b_router
 from src.database.seed import run_seeder
 
 @asynccontextmanager
@@ -28,6 +29,7 @@ app.add_middleware(
 )
 
 app.include_router(esg_router)
+app.include_router(b2b_router)
 
 @app.get("/", tags=["Health Check"])
 async def root() -> dict[str, str]:
