@@ -1,4 +1,5 @@
-from src.schemas.esg import VehicleEmissionFactors, ESGSavingResult
+from src.schemas.esg_schema import ESGSavingResult
+from src.core.enums import VehicleEmissionFactors
 
 
 class ESGEngine:
@@ -36,3 +37,4 @@ class ESGEngine:
             fuel_saved_l=round(total_fuel_saved_l, 4),
             time_saved_min=round(total_time_saved_min, 4)
         )
+

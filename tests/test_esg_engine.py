@@ -1,6 +1,6 @@
 import pytest
-from src.schemas.esg import VehicleEmissionFactors
 from src.services.esg_engine import ESGEngine
+from src.core.enums import VehicleEmissionFactors
 
 
 @pytest.fixture

@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from sqlalchemy.orm import Session
 from src.database.session import engine, SessionLocal
 from src.services.esg_engine import ESGEngine
-from src.schemas.esg import VehicleFactorsEnum
+from src.core.enums import VehicleFactorsEnum
 from src.models import Base, User, Vehicle, Event, Product, Redemption
 
 # --- Seeding for individual tables ---
