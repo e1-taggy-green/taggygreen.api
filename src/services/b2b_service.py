@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from src.repositories.event_repository import EventRepository
 from src.schemas.dashboard_schema import RelatorioESGResponse
@@ -49,3 +50,33 @@ class B2BService:
             economia_financeira=round(economia_reais, 2),
             roi_percentual=round(roi, 2)
         )
+
+    def get_performance_by_category(self, email: str) -> list[dict]:
+        user = self.repository.get_user_by_email(email)
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário B2B não encontrado")
+
+        results = self.repository.get_performance_by_category(user.id)
+        
+        return [
+            {
+                "categoria": row.vehicle_type,
+                "co2_evitado_kg": round(row.total_co2 or 0.0, 4),
+                "combustivel_evitado_litros": round(row.total_fuel or 0.0, 4)
+            } for row in results
+        ]
+
+    def get_fleet_ranking(self, email: str) -> list[dict]:
+        user = self.repository.get_user_by_email(email)
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário B2B não encontrado")
+
+        results = self.repository.get_fleet_ranking(user.id)
+        return [
+            {
+                "posicao": idx,
+                "placa": row.license_plate,
+                "co2_evitado_kg": round(row.total_co2 or 0.0, 4),
+                "transacoes": row.total_transacoes
+            } for idx, row in enumerate(results, start=1)
+        ]

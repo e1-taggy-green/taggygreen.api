@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from src.schemas.dashboard_schema import RelatorioESGResponse
+from src.schemas.dashboard_schema import RelatorioESGResponse, PerformanceCategoriaResponse, RankingFrotaResponse
 from src.database.session import get_db
 from src.services.b2b_service import B2BService
 
@@ -19,3 +19,25 @@ async def get_relatorio_esg(
     """
     service = B2BService(db)
     return service.get_esg_dashboard_report(email)
+
+@router.get("/performance/categoria", response_model=list[PerformanceCategoriaResponse], status_code=200)
+async def get_performance_categoria(
+    email: str = Query(..., description="Email corporativo da frota B2B"),
+    db: Session = Depends(get_db)
+):
+    """
+    Agrega o desempenho ambiental (CO2 e Combustível poupados) fatiado por tipo de veículo.
+    """
+    service = B2BService(db)
+    return service.get_performance_by_category(email)
+
+@router.get("/performance/ranking", response_model=list[RankingFrotaResponse], status_code=200)
+async def get_ranking_frota(
+    email: str = Query(..., description="Email corporativo da frota B2B"),
+    db: Session = Depends(get_db)
+):
+    """
+    Lista os 5 veículos (placas) mais eficientes com base no número de transações e mitigação.
+    """
+    service = B2BService(db)
+    return service.get_fleet_ranking(email)
