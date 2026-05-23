@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -38,6 +39,15 @@ def fixture_client(db_session):
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+@pytest.fixture(autouse=True)
+def mock_fuel_price():
+    """
+    Mocka a resposta da API de combustível para retornar R$ 5,50 nos testes de integração,
+    garantindo determinismo e evitando chamadas reais à API externa.
+    """
+    with patch("src.services.fuel_service.FuelPriceService.get_average_gasoline_price", return_value=5.50):
+        yield
 
 def test_b2b_endpoints_sem_dados(client):
     """
@@ -127,3 +137,69 @@ def test_b2b_endpoints_com_dados(db_session, client):
     assert rank_data[1]["tipo"] == "Caminhão" # Verificar tradução do tipo
     assert rank_data[1]["co2_evitado_kg"] == 5.0
     assert rank_data[1]["transacoes"] == 1
+
+def test_b2b_relatorios_esg_csv(db_session, client):
+    """
+    Testa a geração e exportação do relatório ESG consolidado da frota B2B no formato CSV.
+    """
+    # 1. Usuário inexistente retorna 404
+    response = client.get("/api/v1/b2b/relatorios/esg/csv?email=nonexistent@b2b.com")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Usuário B2B não encontrado"
+
+    # 2. Criar usuário B2B
+    user = User(name="Empresa CSV LTDA", email="csv@empresa.com", user_type="b2b", points=0)
+    db_session.add(user)
+    db_session.commit()
+
+    # 3. Criar veículos (um Carro e um Caminhão)
+    v_car = Vehicle(license_plate="CAR-CSV1", vehicle_type="car", user_id=user.id)
+    v_truck = Vehicle(license_plate="TRK-CSV2", vehicle_type="truck", user_id=user.id)
+    db_session.add_all([v_car, v_truck])
+    db_session.commit()
+
+    # 4. Criar eventos para os veículos
+    import datetime
+    fixed_date1 = datetime.datetime(2026, 5, 23, 10, 0, 0)
+    event_car = Event(
+        vehicle_id=v_car.id,
+        event_type="toll",
+        co2_saved=2.5,
+        fuel_saved=1.0,
+        time_saved=12.0,
+        created_at=fixed_date1
+    )
+    fixed_date2 = datetime.datetime(2026, 5, 23, 11, 30, 0)
+    event_truck = Event(
+        vehicle_id=v_truck.id,
+        event_type="parking",
+        co2_saved=4.5,
+        fuel_saved=2.0,
+        time_saved=6.0,
+        created_at=fixed_date2
+    )
+
+    db_session.add_all([event_car, event_truck])
+    db_session.commit()
+
+    # --- Testar Download do CSV ---
+    response = client.get("/api/v1/b2b/relatorios/esg/csv?email=csv@empresa.com")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/csv; charset=utf-8"
+    assert "attachment; filename=relatorio_esg.csv" in response.headers["content-disposition"]
+
+    csv_body = response.text
+    lines = csv_body.strip().split("\n")
+    assert len(lines) == 3
+    
+    # Verificar cabeçalhos com colunas descritivas solicitadas
+    assert lines[0] == "Data,Placa,Tipo,CO2 Evitado (kg),Combustível Evitado (L),Tempo Economizado (min),Economia Financeira (R$)"
+    
+    # Linha do Caminhão (fixed_date2) - Mais recente por ordem decrescente de data
+    # Economia financeira do Caminhão: (2.0 * 5.50) + (6.0 * (50.0 / 60.0)) = 11.0 + 5.0 = 16.0
+    assert lines[1] == "2026-05-23 11:30:00,TRK-CSV2,Caminhão,4.5,2.0,6.0,16.0"
+    
+    # Linha do Carro (fixed_date1)
+    # Economia financeira do Carro: (1.0 * 5.50) + (12.0 * (50.0 / 60.0)) = 5.50 + 10.0 = 15.5
+    assert lines[2] == "2026-05-23 10:00:00,CAR-CSV1,Carro,2.5,1.0,12.0,15.5"
+
