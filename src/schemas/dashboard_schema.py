@@ -19,5 +19,6 @@ class PerformanceCategoriaResponse(BaseModel):
 class RankingFrotaResponse(BaseModel):
     posicao: int = Field(..., description="Posição no ranking (1 a 5)")
     placa: str = Field(..., description="Placa do veículo")
+    tipo: str = Field(..., description="Tipo/Categoria do veículo (ex: Carro, Caminhão)")
     co2_evitado_kg: float = Field(..., description="Volume total evitado em kg de CO2")
     transacoes: int = Field(..., description="Número de transações (passagens/eventos)")

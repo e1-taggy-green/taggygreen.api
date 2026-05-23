@@ -44,12 +44,13 @@ class EventRepository:
         return (
             self.db.query(
                 Vehicle.license_plate,
+                Vehicle.vehicle_type,
                 func.sum(Event.co2_saved).label("total_co2"),
                 func.count(Event.id).label("total_transacoes")
             )
             .join(Event, Event.vehicle_id == Vehicle.id)
             .filter(Vehicle.user_id == user_id)
-            .group_by(Vehicle.license_plate)
+            .group_by(Vehicle.license_plate, Vehicle.vehicle_type)
             .order_by(desc("total_transacoes"), desc("total_co2"))
             .limit(limit)
             .all()
