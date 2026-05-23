@@ -55,3 +55,20 @@ class EventRepository:
             .limit(limit)
             .all()
         )
+
+    def get_raw_events_for_csv(self, user_id: int):
+        return (
+            self.db.query(
+                Event.created_at,
+                Vehicle.license_plate,
+                Vehicle.vehicle_type,
+                Event.co2_saved,
+                Event.fuel_saved,
+                Event.time_saved
+            )
+            .join(Vehicle, Event.vehicle_id == Vehicle.id)
+            .filter(Vehicle.user_id == user_id)
+            .order_by(Event.created_at.desc())
+            .all()
+        )
+

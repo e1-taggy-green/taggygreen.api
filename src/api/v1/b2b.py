@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 from src.schemas.dashboard_schema import RelatorioESGResponse, PerformanceCategoriaResponse, RankingFrotaResponse
 from src.database.session import get_db
@@ -41,3 +41,19 @@ async def get_ranking_frota(
     """
     service = B2BDashboardService(db)
     return service.get_fleet_ranking(email)
+
+@router.get("/relatorios/esg/csv", status_code=200)
+async def get_relatorio_esg_csv(
+    email: str = Query(..., description="Email corporativo para buscar o relatório da frota"),
+    db: Session = Depends(get_db)
+):
+    """
+    Gera e exporta o relatório ESG consolidado da frota B2B no formato CSV.
+    """
+    service = B2BDashboardService(db)
+    csv_content = service.generate_esg_csv_report(email)
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=relatorio_esg.csv"}
+    )
