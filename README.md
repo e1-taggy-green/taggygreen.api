@@ -79,3 +79,43 @@ poetry run uvicorn src.main:app --reload
 
 A API estará disponível em: `http://localhost:8000`
 A documentação interativa (Swagger UI) pode ser acessada em: `http://localhost:8000/docs`
+
+
+# Programação em Par
+
+Na Sprint 09, adotamos a prática de **Programação em Par (Pair Programming)** para desenvolver funcionalidades do projeto. Abaixo, o detalhamento de cada dupla e as atividades realizadas em conjunto.
+
+---
+
+## Dupla 1 — Backend (FastAPI + Poetry + Pydantic)
+
+**Piloto / Navegador:** Pedro & Renato
+
+| Atividade | Descrição |
+|---|---|
+| Definição de modelos e schemas | Criação e ajuste dos modelos Pydantic para validação de dados de entrada e saída da API |
+| Implementação de endpoints | Desenvolvimento das rotas da API utilizando FastAPI para atender às histórias da sprint |
+| Configuração do ambiente | Gerenciamento de dependências e estruturação do projeto com Poetry |
+
+**Como foi a dinâmica:**
+Pedro e Renato alternaram os papéis de piloto e navegador a cada atividade. Enquanto um codificava, o outro revisava a lógica, sugeria melhorias e acompanhava a consistência do código.
+
+---
+
+## Dupla 2 — Frontend (React)
+
+**Piloto / Navegador:** Caique & Luis Felix
+
+| Atividade | Descrição |
+|---|---|
+| Criação de componentes e telas | Desenvolvimento dos componentes React referentes às histórias da sprint |
+| Integração com a API | Conexão do frontend com os endpoints do backend, tratando requisições e respostas |
+| Estilização e usabilidade | Ajustes visuais e de experiência do usuário nas telas implementadas |
+
+**Como foi a dinâmica:**
+Caique e Luis Felix alternaram os papéis de piloto e navegador a cada componente. Enquanto um conduzia a implementação, o outro revisava a estrutura, a integração com a API e a consistência visual.
+
+---
+
+> **Observação:** Os commits relacionados à programação em par estão identificados no histórico do repositório com co-autoria via `Co-authored-by` na mensagem do commit.
+
