@@ -114,8 +114,3 @@ Pedro e Renato alternaram os papéis de piloto e navegador a cada atividade. Enq
 
 **Como foi a dinâmica:**
 Caique e Luis Felix alternaram os papéis de piloto e navegador a cada componente. Enquanto um conduzia a implementação, o outro revisava a estrutura, a integração com a API e a consistência visual.
-
----
-
-> **Observação:** Os commits relacionados à programação em par estão identificados no histórico do repositório com co-autoria via `Co-authored-by` na mensagem do commit.
-
