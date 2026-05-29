@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from src.schemas.user_schema import UsuarioResponse, RastroHistoricoResponse, ExtratoItem
+from src.schemas.user_schema import UsuarioResponse, MesEconomiaItem, ExtratoItem
 from src.database.session import get_db
 from src.services.b2c_service import B2CService
 
@@ -8,42 +8,43 @@ from src.services.b2c_service import B2CService
 router = APIRouter(prefix="/api/v1/b2c", tags=["B2C Histórico Individual"])
 
 
-@router.get("/usuarios/{user_id}", response_model=UsuarioResponse, status_code=200)
+@router.get("/user", response_model=UsuarioResponse, status_code=200)
 async def get_user(
-    user_id: int,
+    email: str = Query("teste.b2c@taggy.com", description="E-mail do usuário final para buscar informações"),
     db: Session = Depends(get_db),
-):
+) -> UsuarioResponse:
     """
     getUser — Retorna o nome do usuário final e seu saldo atual de
     mitigação ambiental acumulada (kg de CO2 poupado).
     """
     service = B2CService(db)
-    return service.get_user(user_id)
+    return service.get_user(email)
 
 
-@router.get("/usuarios/{user_id}/rastro-historico", response_model=RastroHistoricoResponse, status_code=200)
+@router.get("/user/rastro-historico", response_model=list[MesEconomiaItem], status_code=200)
 async def get_user_rastro_historico(
-    user_id: int,
+    email: str = Query("teste.b2c@taggy.com", description="E-mail do usuário final para buscar o rastro histórico"),
     db: Session = Depends(get_db),
-):
+) -> list[MesEconomiaItem]:
     """
-    getUserRastroHistorico — Retorna nome, saldo de mitigação acumulada e o
-    agrupamento mensal da economia dos últimos 4 meses de uso do usuário.
+    getUserRastroHistorico — Retorna o agrupamento mensal da economia dos 
+    últimos 4 meses de uso do usuário.
     """
     service = B2CService(db)
-    return service.get_user_rastro_historico(user_id)
+    return service.get_user_rastro_historico(email)
 
 
-@router.get("/usuarios/{user_id}/extrato", response_model=list[ExtratoItem], status_code=200)
+@router.get("/user/extrato", response_model=list[ExtratoItem], status_code=200)
 async def get_user_extrato(
-    user_id: int,
+    email: str = Query("teste.b2c@taggy.com", description="E-mail do usuário final para buscar o extrato"),
     limit: int = Query(10, ge=1, le=100, description="Quantidade máxima de passagens recentes a retornar"),
     db: Session = Depends(get_db),
-):
+) -> list[ExtratoItem]:
     """
     getUserExtrato — Retorna as últimas passagens (pedágio/estacionamento)
     do usuário, detalhando o nome da Praça/Estacionamento, a data da passagem
-    e o valor fracionário de CO2 poupado naquele evento singular.
+    e o valor de CO2 poupado naquele evento singular.
     """
     service = B2CService(db)
-    return service.get_user_extrato(user_id, limit)
+    return service.get_user_extrato(email, limit)
+

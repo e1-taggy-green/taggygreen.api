@@ -6,10 +6,10 @@ from src.models.vehicle import Vehicle
 from src.models.user import User
 
 class EventRepository:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session) -> None:
         self.db = db
 
-    def get_events_by_user(self, user_id: int):
+    def get_events_by_user(self, user_id: int) -> list[Event]:
         return self.db.query(Event).join(Vehicle).filter(Vehicle.user_id == user_id).all()
 
     def get_total_co2_saved_by_user(self, user_id: int) -> float:
@@ -23,7 +23,7 @@ class EventRepository:
         )
         return total or 0.0
 
-    def get_monthly_savings_by_user(self, user_id: int, since: datetime):
+    def get_monthly_savings_by_user(self, user_id: int, since: datetime) -> list:
         # Agrupa a economia (CO2, combustível e tempo) por mês a partir da data
         # de corte informada, considerando apenas os eventos do usuário (userID).
         mes = func.strftime("%Y-%m", Event.created_at)
@@ -41,7 +41,7 @@ class EventRepository:
             .all()
         )
 
-    def get_extrato_by_user(self, user_id: int, limit: int = 10):
+    def get_extrato_by_user(self, user_id: int, limit: int = 10) -> list:
         # Lista as últimas passagens (pedágio/estacionamento) das placas do usuário,
         # da mais recente para a mais antiga, para compor o extrato individual.
         return (

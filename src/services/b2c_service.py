@@ -3,9 +3,9 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from src.repositories.user_repository import UserRepository
 from src.repositories.event_repository import EventRepository
+from src.models.user import User
 from src.schemas.user_schema import (
     UsuarioResponse,
-    RastroHistoricoResponse,
     MesEconomiaItem,
     ExtratoItem,
 )
@@ -15,7 +15,7 @@ class B2CService:
     """
     Serviço do Hub B2C: histórico de sustentabilidade individualizado do
     usuário final (motorista). Diferente do B2B (que agrega por frota/CNPJ),
-    todas as consultas aqui filtram exclusivamente pelo userID.
+    todas as consultas aqui filtram exclusivamente pelo e-mail e userID correspondente.
     """
 
     # Tradução do event_type para o nome legível do local de passagem.
@@ -23,24 +23,21 @@ class B2CService:
     # é derivado do tipo de evento já persistido (mesmo padrão do B2B).
     EVENT_TYPE_TRANSLATION = {"toll": "Praça de Pedágio", "parking": "Estacionamento"}
 
-    
     MONTH_NAMES_PT = {
         1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
         5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
         9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro",
     }
 
-   
     MONTHS_WINDOW = 4
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session) -> None:
         self.db = db
         self.user_repository = UserRepository(db)
         self.event_repository = EventRepository(db)
 
-    def _get_user_or_404(self, user_id: int):
-       
-        user = self.user_repository.get_user_by_id(user_id)
+    def _get_user_by_email_or_404(self, email: str) -> User:
+        user = self.user_repository.get_user_by_email(email)
         if not user:
             raise HTTPException(status_code=404, detail="Usuário não encontrado")
         return user
@@ -59,46 +56,37 @@ class B2CService:
         ano, mes = label.split("-")
         return f"{self.MONTH_NAMES_PT[int(mes)]}/{ano}"
 
-    def get_user(self, user_id: int) -> UsuarioResponse:
-        # 1. Valida o usuário e obtém seu nome.
-        user = self._get_user_or_404(user_id)
+    def get_user(self, email: str) -> UsuarioResponse:
+        # 1. Valida o usuário por e-mail e obtém seus dados.
+        user = self._get_user_by_email_or_404(email)
         # 2. Soma o CO2 poupado em todos os eventos do usuário (saldo de mitigação).
-        saldo = self.event_repository.get_total_co2_saved_by_user(user_id)
-        return UsuarioResponse(nome=user.name, saldo_mitigacao_kg=round(saldo, 4))
+        saldo = self.event_repository.get_total_co2_saved_by_user(user.id)
+        return UsuarioResponse(userName=user.name, userPoints=round(saldo, 4))
 
-    def get_user_rastro_historico(self, user_id: int) -> RastroHistoricoResponse:
-       
-        user = self._get_user_or_404(user_id)
-        
-        saldo = self.event_repository.get_total_co2_saved_by_user(user_id)
+    def get_user_rastro_historico(self, email: str) -> list[MesEconomiaItem]:
+        # 1. Valida o usuário por e-mail e obtém seus dados.
+        user = self._get_user_by_email_or_404(email)
         
         data_corte = self._calcular_data_corte()
-        linhas = self.event_repository.get_monthly_savings_by_user(user_id, data_corte)
-        historico = [
+        linhas = self.event_repository.get_monthly_savings_by_user(user.id, data_corte)
+        return [
             MesEconomiaItem(
                 mes=self._formatar_mes(linha.mes),
-                co2_evitado_kg=round(linha.co2_saved or 0.0, 4),
-                combustivel_evitado_litros=round(linha.fuel_saved or 0.0, 4),
-                tempo_economizado_minutos=round(linha.time_saved or 0.0, 4),
+                co2_economizado=round(linha.co2_saved or 0.0, 4),
             )
             for linha in linhas
         ]
-        return RastroHistoricoResponse(
-            nome=user.name,
-            saldo_mitigacao_kg=round(saldo, 4),
-            historico_mensal=historico,
-        )
 
-    def get_user_extrato(self, user_id: int, limit: int = 10) -> list[ExtratoItem]:
-        # 1. Valida o usuário (o extrato é o histórico pelo uso da placa do usuário).
-        self._get_user_or_404(user_id)
+    def get_user_extrato(self, email: str, limit: int = 10) -> list[ExtratoItem]:
+        # 1. Valida o usuário por e-mail.
+        user = self._get_user_by_email_or_404(email)
         
-        eventos = self.event_repository.get_extrato_by_user(user_id, limit)
+        eventos = self.event_repository.get_extrato_by_user(user.id, limit)
         return [
             ExtratoItem(
-                local=self.EVENT_TYPE_TRANSLATION.get(evento.event_type, evento.event_type),
+                nome=self.EVENT_TYPE_TRANSLATION.get(evento.event_type, evento.event_type),
                 data=evento.created_at,
-                co2_evitado_kg=round(evento.co2_saved or 0.0, 4),
+                registro_economia=round(evento.co2_saved or 0.0, 4),
             )
             for evento in eventos
         ]
