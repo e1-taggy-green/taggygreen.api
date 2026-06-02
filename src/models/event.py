@@ -6,7 +6,7 @@ class Event(Base):
     __tablename__ = "events"
 
     id = Column(Integer, primary_key=True, index=True)
-    vehicle_id = Column(Integer, ForeignKey("vehicles.id"))
+    vehicle_id = Column(Integer, ForeignKey("vehicles.id"), index=True)
     event_type = Column(String) # 'toll', 'parking'
     co2_saved = Column(Float, default=0.0)
     time_saved = Column(Float, default=0.0)
