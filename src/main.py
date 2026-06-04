@@ -7,6 +7,7 @@ from src.api.v1.esg import router as esg_router
 from src.api.v1.b2b import router as b2b_router
 from src.api.v1.b2c import router as b2c_router
 from src.api.v1.simulador import router as simulador_router
+from src.api.v1.marketplace import router as marketplace_router
 from src.database.seed import run_seeder
 
 @asynccontextmanager
@@ -34,6 +35,7 @@ app.include_router(esg_router)
 app.include_router(b2b_router)
 app.include_router(b2c_router)
 app.include_router(simulador_router)
+app.include_router(marketplace_router)
 
 @app.get("/", tags=["Health Check"])
 async def root() -> dict[str, str]:

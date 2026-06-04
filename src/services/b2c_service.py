@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from src.repositories.user_repository import UserRepository
 from src.repositories.event_repository import EventRepository
+from src.repositories.market_repository import MarketplaceRepository
 from src.models.user import User
 from src.schemas.user_schema import (
     UsuarioResponse,
@@ -18,9 +19,6 @@ class B2CService:
     todas as consultas aqui filtram exclusivamente pelo e-mail e userID correspondente.
     """
 
-    # Tradução do event_type para o nome legível do local de passagem.
-    # Não existe coluna de "nome da praça" nos models, então o rótulo amigável
-    # é derivado do tipo de evento já persistido (mesmo padrão do B2B).
     EVENT_TYPE_TRANSLATION = {"toll": "Praça de Pedágio", "parking": "Estacionamento"}
 
     MONTH_NAMES_PT = {
@@ -35,6 +33,7 @@ class B2CService:
         self.db = db
         self.user_repository = UserRepository(db)
         self.event_repository = EventRepository(db)
+        self.market_repository = MarketplaceRepository(db)
 
     def _get_user_by_email_or_404(self, email: str) -> User:
         user = self.user_repository.get_user_by_email(email)
@@ -59,14 +58,18 @@ class B2CService:
     def get_user(self, email: str) -> UsuarioResponse:
         # 1. Valida o usuário por e-mail e obtém seus dados.
         user = self._get_user_by_email_or_404(email)
-        # 2. Soma o CO2 poupado em todos os eventos do usuário (saldo de mitigação).
-        saldo = self.event_repository.get_total_co2_saved_by_user(user.id)
-        return UsuarioResponse(userName=user.name, userPoints=round(saldo, 4))
+        # 2. Soma o CO2 poupado em todos os eventos do usuário.
+        co2_total = self.event_repository.get_total_co2_saved_by_user(user.id)
+        # 3. Desconta os resgates já realizados para obter o saldo real disponível.
+        #    Usa a mesma lógica do MarketService._get_saldo_real para consistência.
+        custo_resgates = self.market_repository.sum_redemptions_cost_by_user(user.id)
+        saldo_real = round(co2_total - custo_resgates, 4)
+        return UsuarioResponse(userName=user.name, userPoints=saldo_real)
 
     def get_user_rastro_historico(self, email: str) -> list[MesEconomiaItem]:
         # 1. Valida o usuário por e-mail e obtém seus dados.
         user = self._get_user_by_email_or_404(email)
-        
+
         data_corte = self._calcular_data_corte()
         linhas = self.event_repository.get_monthly_savings_by_user(user.id, data_corte)
         return [
@@ -80,7 +83,7 @@ class B2CService:
     def get_user_extrato(self, email: str, limit: int = 10) -> list[ExtratoItem]:
         # 1. Valida o usuário por e-mail.
         user = self._get_user_by_email_or_404(email)
-        
+
         eventos = self.event_repository.get_extrato_by_user(user.id, limit)
         return [
             ExtratoItem(
