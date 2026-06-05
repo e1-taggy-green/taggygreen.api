@@ -2,8 +2,9 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from src.repositories.market_repository import MarketplaceRepository
 from src.repositories.event_repository import EventRepository
+from src.repositories.user_repository import UserRepository
 from src.schemas.market_schema import (
-    ProdutoMPItem,
+    ProdutoResponse,
     ProdutosPaginadosResponse,
     ResgateResponse,
 )
@@ -20,77 +21,97 @@ class MarketService:
         self.db = db
         self.market_repository = MarketplaceRepository(db)
         self.event_repository = EventRepository(db)
+        # UserRepository injetado para validar existência do usuário no resgate.
+        self.user_repository = UserRepository(db)
 
-    def _get_saldo_real(self, user_id: int) -> float:
-        # Saldo real = total de CO2 poupado em eventos - custo de todos os resgates.
-        # Esse cálculo é exclusivo da validação do Marketplace nesta task.
-        saldo_eventos = self.event_repository.get_total_co2_saved_by_user(user_id)
-        custo_resgates = self.market_repository.sum_redemptions_cost_by_user(user_id)
-        return round(saldo_eventos - custo_resgates, 4)
 
-    def get_destaque(self) -> ProdutoMPItem:
-        # getDestaqueMP: retorna a recompensa em destaque (maior cost_points).
-        produto = self.market_repository.get_featured_product()
-        if not produto:
+
+    def get_destaques(self) -> list[ProdutoResponse]:
+        """getDestaqueMP — Retorna os 3 produtos parceiros em destaque
+        (os de maior valor em Pontos de Carbono), conforme contrato Swagger.
+        """
+        produtos = self.market_repository.get_featured_products(limit=3)
+        if not produtos:
             raise HTTPException(status_code=404, detail="Nenhuma recompensa disponível")
-        return ProdutoMPItem(
-            id=produto.id,
-            nome=produto.name,
-            custo_pontos_carbono=produto.cost_points,
-        )
+        return [
+            ProdutoResponse(
+                id=p.id,
+                nome=p.name,
+                pontos_custo=p.cost_points,
+            )
+            for p in produtos
+        ]
 
     def get_produtos_paginados(self, page: int, size: int) -> ProdutosPaginadosResponse:
-        # getProdutosMP: lista paginada das recompensas disponíveis.
+        """getProdutosMP — Lista paginada das recompensas disponíveis.
+
+        Retorna apenas 'items' e 'total', sem expor 'page'/'size' no
+        response body (conforme Swagger).
+        """
         produtos, total = self.market_repository.get_products_paginated(page, size)
         items = [
-            ProdutoMPItem(
+            ProdutoResponse(
                 id=produto.id,
                 nome=produto.name,
-                custo_pontos_carbono=produto.cost_points,
+                pontos_custo=produto.cost_points,
             )
             for produto in produtos
         ]
-        return ProdutosPaginadosResponse(page=page, size=size, total=total, items=items)
+        return ProdutosPaginadosResponse(total=total, items=items)
 
-    def resgatar(self, user_id: int, product_id: int) -> ResgateResponse:
-        # updateSaldo: processa o resgate de uma recompensa de forma atômica.
+    def resgatar_produto(self, email: str, product_id: int) -> ResgateResponse:
+        """updateSaldo — Processa o resgate de forma atômica.
+
+        Fluxo:
+        1. Valida que o USUÁRIO existe buscando por e-mail (404 se não).
+        2. Valida que o PRODUTO existe (404 se não).
+        3. Calcula saldo real do usuário (eventos − resgates).
+        4. Saldo insuficiente → rollback + 400 (conforme Swagger).
+        5. Registra o resgate + commit.
+        """
         try:
-            # 1. Valida que a recompensa existe (404 caso contrário).
+            # 1. Valida existência do usuário (impede resgate fantasma) buscando por e-mail.
+            usuario = self.user_repository.get_user_by_email(email)
+            if not usuario:
+                raise HTTPException(
+                    status_code=404, detail="Usuário não encontrado"
+                )
+            user_id = usuario.id
+
+            # 2. Valida que a recompensa existe.
             produto = self.market_repository.get_product_by_id(product_id)
             if not produto:
-                raise HTTPException(status_code=404, detail="Produto não encontrado")
+                raise HTTPException(
+                    status_code=404, detail="Produto não encontrado"
+                )
 
-            # 2. Calcula o saldo real do usuário (eventos - resgates anteriores).
-            saldo_real = self._get_saldo_real(user_id)
+            # 3. Obtém o saldo atual do usuário (diretamente da coluna points)
+            saldo_real = usuario.points
 
-            # 3. Saldo insuficiente: aborta a transação (rollback) e retorna 422.
-            #    Isso garante que o saldo nunca fique negativo.
+            # 4. Saldo insuficiente: aborta a transação e retorna 400.
             if saldo_real < produto.cost_points:
                 self.db.rollback()
-                raise HTTPException(status_code=422, detail="Saldo insuficiente")
+                raise HTTPException(
+                    status_code=400, detail="saldo insuficiente"
+                )
 
-            # 4. Saldo suficiente: registra o resgate e confirma a transação (commit).
-            redemption = self.market_repository.create_redemption(
+            # 5. Saldo suficiente: registra o resgate, atualiza saldo e confirma (commit).
+            self.market_repository.create_redemption(
                 user_id=user_id,
                 product_id=product_id,
                 cost=produto.cost_points,
             )
+            
+            saldo_atualizado = saldo_real - produto.cost_points
+            self.user_repository.update_balance(user_id, saldo_atualizado)
+            
             self.db.commit()
 
-            # Saldo restante já considerando o débito recém-confirmado.
-            saldo_restante = round(saldo_real - produto.cost_points, 4)
-            return ResgateResponse(
-                redemption_id=redemption.id,
-                user_id=user_id,
-                product_id=product_id,
-                pontos_debitados=produto.cost_points,
-                saldo_restante=saldo_restante,
-                mensagem="Resgate realizado com sucesso",
-            )
+            return ResgateResponse(saldo_atualizado=saldo_atualizado)
         except HTTPException:
-            # Erros de negócio (404/422) já trataram seu próprio estado: re-propaga.
+            # Erros de negócio (404/400) já trataram seu próprio estado: re-propaga.
             raise
         except Exception:
-            # 5. Qualquer falha inesperada de banco: desfaz a transação e re-lança.
+            # Qualquer falha inesperada de banco: desfaz a transação e re-lança.
             self.db.rollback()
             raise

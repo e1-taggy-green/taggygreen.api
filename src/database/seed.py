@@ -21,7 +21,7 @@ def _seed_users(db: Session, faker: Faker) -> list[User]:
     users = []
     
     # --- Usuários Fixos para Demonstração ---
-    demo_b2c = User(name="Carlos Teste (B2C)", email="teste.b2c@taggy.com", user_type='b2c', points=50000)
+    demo_b2c = User(name="Carlos Teste", email="teste.b2c@taggy.com", user_type='b2c', points=50000)
     demo_b2b = User(name="Frota Teste S/A (B2B)", email="teste.b2b@taggy.com", user_type='b2b', points=0)
     users.extend([demo_b2c, demo_b2b])
     
@@ -86,14 +86,14 @@ def _seed_events(db: Session, esg_engine: ESGEngine, vehicles: list[Vehicle], fa
     
     events_batch = []
     
-    def generate_event(vehicle: Vehicle, past_date) -> Event:
+    def generate_event(vehicle: Vehicle, past_date, occurrences: int = 1) -> Event:
         event_type = random.choice(['toll', 'parking'])
         v_factors = VehicleFactorsEnum[vehicle.vehicle_type.upper()].value
         resultado = esg_engine.calculate_savings(
             vehicle_factors=v_factors,
             vehicles_count=1,
             event_type=event_type,
-            occurrences=1
+            occurrences=occurrences
         )
         return Event(
             vehicle_id=vehicle.id,
@@ -109,7 +109,7 @@ def _seed_events(db: Session, esg_engine: ESGEngine, vehicles: list[Vehicle], fa
     if b2c_vehicle:
         for _ in range(100):
             date_obj = faker.date_time_between(start_date='-6m', end_date='now')
-            events_batch.append(generate_event(b2c_vehicle, date_obj))
+            events_batch.append(generate_event(b2c_vehicle, date_obj, occurrences=random.randint(600, 1000)))
 
     # 2. 30 Eventos para cada veículo da frota Demo B2B
     b2b_vehicles = [v for v in vehicles if v.license_plate.startswith("B2B-")]
@@ -136,10 +136,19 @@ def _seed_redemptions(db: Session, users: list[User], products: list[Product]):
     # 1. Resgates para Demo B2C
     demo_b2c = next((u for u in users if u.email == "teste.b2c@taggy.com"), None)
     if demo_b2c:
+        # Busca o total de CO2 economizado que gerou saldo real de pontos
+        from src.repositories.event_repository import EventRepository
+        event_repo = EventRepository(db)
+        real_points = event_repo.get_total_co2_saved_by_user(demo_b2c.id)
+        
+        # Queremos deixar o usuário demo com saldo real livre para testar resgates adicionais
+        saldo_restante = real_points
         for _ in range(10):
             product = random.choice(products)
-            if demo_b2c.points >= product.cost_points:
+            # Garante que resta saldo suficiente para novos resgates manuais (ex: pelo menos 5.000 pontos)
+            if saldo_restante - product.cost_points >= 5000:
                 redemptions.append(Redemption(user_id=demo_b2c.id, product_id=product.id))
+                saldo_restante -= product.cost_points
                 demo_b2c.points -= product.cost_points
 
     # 2. Resgates aleatórios

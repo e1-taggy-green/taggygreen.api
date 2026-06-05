@@ -8,6 +8,7 @@ from src.schemas.user_schema import (
     UsuarioResponse,
     MesEconomiaItem,
     ExtratoItem,
+    AddPointsResponse,
 )
 
 
@@ -59,9 +60,9 @@ class B2CService:
     def get_user(self, email: str) -> UsuarioResponse:
         # 1. Valida o usuário por e-mail e obtém seus dados.
         user = self._get_user_by_email_or_404(email)
-        # 2. Soma o CO2 poupado em todos os eventos do usuário (saldo de mitigação).
-        saldo = self.event_repository.get_total_co2_saved_by_user(user.id)
-        return UsuarioResponse(userName=user.name, userPoints=round(saldo, 4))
+        # 2. Retorna o saldo diretamente da coluna points do usuário.
+        saldo = user.points
+        return UsuarioResponse(userName=user.name, userPoints=saldo)
 
     def get_user_rastro_historico(self, email: str) -> list[MesEconomiaItem]:
         # 1. Valida o usuário por e-mail e obtém seus dados.
@@ -90,3 +91,10 @@ class B2CService:
             )
             for evento in eventos
         ]
+
+    def add_points(self, email: str, points: int) -> AddPointsResponse:
+        user = self._get_user_by_email_or_404(email)
+        user.points += points
+        self.user_repository.update_balance(user.id, user.points)
+        self.db.commit()
+        return AddPointsResponse(saldo_atualizado=user.points)

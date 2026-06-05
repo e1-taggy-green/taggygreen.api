@@ -13,6 +13,9 @@ class UserRepository:
         # Busca o usuário pelo e-mail
         return self.db.query(User).filter(User.email == email).first()
 
-    def update_balance(self, user_id: int, new_balance: float) -> None:
-        pass
+    def update_balance(self, user_id: int, new_balance: int) -> None:
+        user = self.get_user_by_id(user_id)
+        if user:
+            user.points = new_balance
+            self.db.add(user)
 

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from src.schemas.market_schema import (
-    ProdutoMPItem,
+    ProdutoResponse,
     ProdutosPaginadosResponse,
     ResgateRequest,
     ResgateResponse,
@@ -10,19 +10,20 @@ from src.database.session import get_db
 from src.services.market_service import MarketService
 
 # Router do Marketplace: programa de fidelidade B2C (recompensas e resgates).
-router = APIRouter(prefix="/api/v1/marketplace", tags=["Marketplace Fidelidade B2C"])
+# Prefixo inclui /b2c conforme contrato Swagger oficial (openapi.yaml).
+router = APIRouter(prefix="/api/v1/b2c/marketplace", tags=["B2C - Marketplace"])
 
 
-@router.get("/destaque", response_model=ProdutoMPItem, status_code=200)
-async def get_destaque_mp(
+@router.get("/destaques", response_model=list[ProdutoResponse], status_code=200)
+async def get_destaques_mp(
     db: Session = Depends(get_db),
-) -> ProdutoMPItem:
+) -> list[ProdutoResponse]:
     """
-    getDestaqueMP — Retorna a recompensa em destaque do Marketplace
-    (a de maior valor em Pontos de Carbono).
+    getDestaqueMP — Retorna os 3 produtos parceiros em destaque
+    (os de maior valor em Pontos de Carbono).
     """
     service = MarketService(db)
-    return service.get_destaque()
+    return service.get_destaques()
 
 
 @router.get("/produtos", response_model=ProdutosPaginadosResponse, status_code=200)
@@ -39,15 +40,15 @@ async def get_produtos_mp(
     return service.get_produtos_paginados(page, size)
 
 
-@router.post("/resgates", response_model=ResgateResponse, status_code=201)
-async def update_saldo(
+@router.post("/resgatar", response_model=ResgateResponse, status_code=200)
+async def resgatar_produto(
     request: ResgateRequest,
     db: Session = Depends(get_db),
 ) -> ResgateResponse:
     """
-    updateSaldo — Processa o resgate de uma recompensa: valida o saldo real do
-    usuário, abate os Pontos de Carbono e garante (transação atômica) que o
-    saldo nunca fique negativo. Retorna 422 quando o saldo é insuficiente.
+    updateSaldo — Processa o resgate de uma recompensa: valida o usuário e
+    o saldo real, abate os Pontos de Carbono e garante (transação atômica)
+    que o saldo nunca fique negativo. Retorna 400 quando o saldo é insuficiente.
     """
     service = MarketService(db)
-    return service.resgatar(request.user_id, request.product_id)
+    return service.resgatar_produto(request.email, request.product_id)

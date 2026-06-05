@@ -25,13 +25,18 @@ class MarketplaceRepository:
         # Busca uma recompensa exclusivamente pelo seu ID (chave primária).
         return self.db.query(Product).filter(Product.id == product_id).first()
 
-    def get_featured_product(self) -> Product | None:
-        # Critério de destaque acordado para esta task: a recompensa de maior
-        # valor (maior cost_points). Em empate, retorna a primeira por id.
+    def get_featured_products(self, limit: int = 3) -> list[Product]:
+        """Retorna os 'limit' produtos de maior valor em pontos (destaques).
+
+        Critério: ordenação por cost_points DESC (empate: menor id primeiro).
+        Usa .limit() para trazer apenas o necessário direto do banco,
+        evitando carregar todos os produtos na memória Python.
+        """
         return (
             self.db.query(Product)
             .order_by(Product.cost_points.desc(), Product.id.asc())
-            .first()
+            .limit(limit)
+            .all()
         )
 
     def sum_redemptions_cost_by_user(self, user_id: int) -> int:

@@ -8,7 +8,7 @@ class UsuarioResponse(BaseModel):
     e seu saldo atual de mitigação ambiental acumulada.
     """
     userName: str = Field(..., description="Nome do usuário final")
-    userPoints: float = Field(..., description="Saldo atual de mitigação acumulada (kg de CO2 poupado)")
+    userPoints: int = Field(..., description="Saldo atual de pontos Taggy (100 pontos = 1kg CO2 poupado)")
 
 
 class MesEconomiaItem(BaseModel):
@@ -22,4 +22,15 @@ class ExtratoItem(BaseModel):
     nome: str = Field(..., description="Nome da Praça/Estacionamento do evento")
     data: datetime = Field(..., description="Data da passagem")
     registro_economia: float = Field(..., description="Valor fracionário de CO2 poupado nesse evento singular (kg)")
+
+
+class AddPointsRequest(BaseModel):
+    """Contrato para a adição de pontos ao usuário."""
+    email: str = Field("teste.b2c@taggy.com", description="E-mail do usuário")
+    points: int = Field(..., description="Quantidade de pontos a serem adicionados")
+
+
+class AddPointsResponse(BaseModel):
+    """Resposta após adicionar pontos."""
+    saldo_atualizado: int = Field(..., description="Saldo atualizado de pontos")
 

@@ -1,36 +1,28 @@
 from pydantic import BaseModel, Field
 
 
-class ProdutoMPItem(BaseModel):
+class ProdutoResponse(BaseModel):
     """
-    Contrato de uma única recompensa do Marketplace (getDestaqueMP / getProdutosMP).
-    O image_url não é exposto pois não existe coluna correspondente no model Product
-    (o front mapeia a imagem a partir do id).
+    Contrato de um produto/recompensa do Marketplace (Swagger: Produto).
+    O front-end resolve a imagem a partir do id — por isso não há campo image_url.
     """
-    id: int = Field(..., description="Identificador único do produto/recompensa")
-    nome: str = Field(..., description="Nome da recompensa (Product.name)")
-    custo_pontos_carbono: int = Field(..., description="Custo em Pontos de Carbono (Product.cost_points)")
+    id: int = Field(..., description="Identificador único do produto")
+    nome: str = Field(..., description="Nome da recompensa")
+    pontos_custo: int = Field(..., description="Custo em Pontos de Carbono")
 
 
 class ProdutosPaginadosResponse(BaseModel):
-    """Contrato do endpoint getProdutosMP: listagem paginada de recompensas."""
-    page: int = Field(..., description="Página atual da listagem")
-    size: int = Field(..., description="Quantidade de itens por página")
-    total: int = Field(..., description="Total geral de recompensas disponíveis")
-    items: list[ProdutoMPItem] = Field(..., description="Recompensas desta página")
+    """Resposta paginada: apenas items e total (conforme Swagger)."""
+    items: list[ProdutoResponse] = Field(..., description="Recompensas da página")
+    total: int = Field(..., description="Total geral de recompensas")
 
 
 class ResgateRequest(BaseModel):
-    """Contrato de entrada do endpoint updateSaldo: pedido de resgate de recompensa."""
-    user_id: int = Field(..., gt=0, description="Identificador do usuário que está resgatando")
-    product_id: int = Field(..., gt=0, description="Identificador da recompensa a ser resgatada")
+    """Payload de entrada do resgate: email + product_id."""
+    email: str = Field("teste.b2c@taggy.com", description="E-mail do usuário que está resgatando")
+    product_id: int = Field(..., gt=0, description="ID do produto a resgatar")
 
 
 class ResgateResponse(BaseModel):
-    """Contrato de saída do endpoint updateSaldo: confirmação do resgate processado."""
-    redemption_id: int = Field(..., description="Identificador do resgate criado")
-    user_id: int = Field(..., description="Identificador do usuário que resgatou")
-    product_id: int = Field(..., description="Identificador da recompensa resgatada")
-    pontos_debitados: int = Field(..., description="Pontos de Carbono abatidos no resgate")
-    saldo_restante: float = Field(..., description="Saldo real restante após o débito do resgate")
-    mensagem: str = Field(..., description="Mensagem de confirmação do resgate")
+    """Payload de saída do resgate: apenas o saldo atualizado (conforme Swagger)."""
+    saldo_atualizado: int = Field(..., description="Saldo de pontos após o resgate")

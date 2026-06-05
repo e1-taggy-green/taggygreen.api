@@ -48,3 +48,9 @@ async def root() -> dict[str, str]:
         "status": "online",
         "version": settings.VERSION
     }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("src.main:app", host="127.0.0.1", port=8000, reload=True)
+
