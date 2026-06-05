@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from src.schemas.user_schema import UsuarioResponse, MesEconomiaItem, ExtratoItem, AddPointsRequest, AddPointsResponse
+from src.schemas.user_schema import UsuarioResponse, MesEconomiaItem, ExtratoItem, EquivalenciasResponse, AddPointsRequest, AddPointsResponse
 from src.database.session import get_db
 from src.services.b2c_service import B2CService
 
@@ -47,6 +47,20 @@ async def get_user_extrato(
     """
     service = B2CService(db)
     return service.get_user_extrato(email, limit)
+
+
+@router.get("/user/equivalencias", response_model=EquivalenciasResponse, status_code=200)
+async def get_user_equivalencias(
+    email: str = Query("teste.b2c@taggy.com", description="E-mail do usuário final para calcular as equivalências ambientais"),
+    db: Session = Depends(get_db),
+) -> EquivalenciasResponse:
+    """
+    getUserEquivalencias — Traduz o CO2 total poupado pelo usuário em
+    equivalências ambientais tangíveis (árvores preservadas, litros de
+    gasolina e horas de iluminação LED equivalentes).
+    """
+    service = B2CService(db)
+    return service.get_equivalencias(email)
 
 
 @router.post("/user/add-points", response_model=AddPointsResponse, status_code=200)
