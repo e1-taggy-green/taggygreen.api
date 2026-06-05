@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from src.schemas.user_schema import UsuarioResponse, MesEconomiaItem, ExtratoItem
+from src.schemas.user_schema import UsuarioResponse, MesEconomiaItem, ExtratoItem, AddPointsRequest, AddPointsResponse
 from src.database.session import get_db
 from src.services.b2c_service import B2CService
 
@@ -47,4 +47,16 @@ async def get_user_extrato(
     """
     service = B2CService(db)
     return service.get_user_extrato(email, limit)
+
+
+@router.post("/user/add-points", response_model=AddPointsResponse, status_code=200)
+async def add_points(
+    request: AddPointsRequest,
+    db: Session = Depends(get_db),
+) -> AddPointsResponse:
+    """
+    addPoints — Adiciona uma quantidade de pontos ao usuário especificado.
+    """
+    service = B2CService(db)
+    return service.add_points(request.email, request.points)
 
