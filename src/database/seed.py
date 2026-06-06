@@ -108,24 +108,25 @@ def _seed_events(db: Session, esg_engine: ESGEngine, vehicles: list[Vehicle], fa
     b2c_vehicle = next((v for v in vehicles if v.license_plate == "B2C-0001"), None)
     if b2c_vehicle:
         for _ in range(100):
-            date_obj = faker.date_time_between(start_date='-6m', end_date='now')
+            date_obj = faker.date_time_between(start_date='-180d', end_date='now')
             events_batch.append(generate_event(b2c_vehicle, date_obj, occurrences=random.randint(600, 1000)))
 
     # 2. 30 Eventos para cada veículo da frota Demo B2B
     b2b_vehicles = [v for v in vehicles if v.license_plate.startswith("B2B-")]
     for b2b_v in b2b_vehicles:
         for _ in range(30):
-            date_obj = faker.date_time_between(start_date='-6m', end_date='now')
+            date_obj = faker.date_time_between(start_date='-180d', end_date='now')
             events_batch.append(generate_event(b2b_v, date_obj))
 
     # 3. 500 Eventos aleatórios para a massa restante
     other_vehicles = [v for v in vehicles if not v.license_plate.startswith("B2C-") and not v.license_plate.startswith("B2B-")]
     if other_vehicles:
         for _ in range(500):
-            date_obj = faker.date_time_between(start_date='-6m', end_date='now')
+            # Massa restante gerada com range de 4 meses
+            date_obj = faker.date_time_between(start_date='-120d', end_date='now')
             events_batch.append(generate_event(random.choice(other_vehicles), date_obj))
 
-    db.bulk_save_objects(events_batch)
+    db.add_all(events_batch)
     db.commit()
     print(f"   -> {len(events_batch)} eventos salvos com sucesso!")
 
