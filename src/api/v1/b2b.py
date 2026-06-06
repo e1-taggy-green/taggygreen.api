@@ -9,7 +9,7 @@ router = APIRouter(prefix="/api/v1/b2b", tags=["B2B ESG"])
 
 @router.get("/relatorios/esg", response_model=RelatorioESGResponse, status_code=200)
 async def get_relatorio_esg(
-    email: str = Query(..., description="Email corporativo para buscar o dashboard consolidado"),
+    email: str = Query("teste.b2b@taggy.com", description="Email corporativo para buscar o dashboard consolidado"),
     db: Session = Depends(get_db)
 ):
     """
@@ -22,7 +22,7 @@ async def get_relatorio_esg(
 
 @router.get("/performance/categoria", response_model=list[PerformanceCategoriaResponse], status_code=200)
 async def get_performance_categoria(
-    email: str = Query(..., description="Email corporativo da frota B2B"),
+    email: str = Query("teste.b2b@taggy.com", description="Email corporativo da frota B2B"),
     db: Session = Depends(get_db)
 ):
     """
@@ -33,7 +33,7 @@ async def get_performance_categoria(
 
 @router.get("/performance/ranking", response_model=list[RankingFrotaResponse], status_code=200)
 async def get_ranking_frota(
-    email: str = Query(..., description="Email corporativo da frota B2B"),
+    email: str = Query("teste.b2b@taggy.com", description="Email corporativo da frota B2B"),
     db: Session = Depends(get_db)
 ):
     """
@@ -44,7 +44,7 @@ async def get_ranking_frota(
 
 @router.get("/relatorios/esg/csv", status_code=200)
 async def get_relatorio_esg_csv(
-    email: str = Query(..., description="Email corporativo para buscar o relatório da frota"),
+    email: str = Query("teste.b2b@taggy.com", description="Email corporativo para buscar o relatório da frota"),
     db: Session = Depends(get_db)
 ):
     """
