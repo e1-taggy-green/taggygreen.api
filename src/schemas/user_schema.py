@@ -24,6 +24,17 @@ class ExtratoItem(BaseModel):
     registro_economia: float = Field(..., description="Valor fracionário de CO2 poupado nesse evento singular (kg)")
 
 
+class EquivalenciasResponse(BaseModel):
+    """
+    Contrato do endpoint getUserEquivalencias: traduz o CO2 total poupado pelo
+    usuário em equivalências ambientais tangíveis para exibição no rastro verde.
+    """
+    arvores: int = Field(..., description="Nº de árvores equivalentes pela absorção média anual de CO2")
+    combustivel_litros: int = Field(..., description="Litros de gasolina equivalentes ao CO2 poupado")
+    horas_led: int = Field(..., description="Horas de iluminação LED equivalentes ao CO2 poupado")
+    co2_total_kg: int = Field(..., description="Volume total bruto de CO2 poupado (kg)")
+
+
 class AddPointsRequest(BaseModel):
     """Contrato para a adição de pontos ao usuário."""
     email: str = Field("teste.b2c@taggy.com", description="E-mail do usuário")

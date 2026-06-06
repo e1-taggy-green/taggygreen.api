@@ -13,7 +13,7 @@ class EventRepository:
         return self.db.query(Event).join(Vehicle).filter(Vehicle.user_id == user_id).all()
 
     def get_total_co2_saved_by_user(self, user_id: int) -> float:
-        # Soma todo o CO2 poupado pelo usuário (saldo de mitigação acumulada),
+        # Soma todo o CO2 poupasaldo pelo usuário (do de mitigação acumulada),
         # filtrando exclusivamente pelos eventos das placas atreladas ao userID.
         total = (
             self.db.query(func.sum(Event.co2_saved))

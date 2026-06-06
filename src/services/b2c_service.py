@@ -1,3 +1,4 @@
+import math
 from datetime import datetime
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -8,6 +9,7 @@ from src.schemas.user_schema import (
     UsuarioResponse,
     MesEconomiaItem,
     ExtratoItem,
+    EquivalenciasResponse,
     AddPointsResponse,
 )
 
@@ -31,6 +33,12 @@ class B2CService:
     }
 
     MONTHS_WINDOW = 4
+
+    # Fatores de conversão do CO2 poupado em equivalências ambientais tangíveis,
+    # usados para traduzir o saldo de mitigação em métricas do dia a dia.
+    CO2_POR_ARVORE_KG = 15.0  # Absorção média anual de CO2 de 1 árvore
+    FATOR_CO2_PARA_LITROS = 0.42  # Conversão CO2 → litros de gasolina
+    FATOR_CO2_PARA_LED_HORAS = 8.5  # Conversão CO2 → horas de LED
 
     def __init__(self, db: Session) -> None:
         self.db = db
@@ -91,6 +99,19 @@ class B2CService:
             )
             for evento in eventos
         ]
+
+    def get_equivalencias(self, email: str) -> EquivalenciasResponse:
+        # 1. Valida o usuário por e-mail e obtém seus dados.
+        user = self._get_user_by_email_or_404(email)
+        # 2. Saldo total de mitigação ambiental acumulada (kg de CO2 poupado).
+        co2_total = self.event_repository.get_total_co2_saved_by_user(user.id)
+        # 3. Traduz o CO2 poupado nas equivalências ambientais exibidas no front.
+        return EquivalenciasResponse(
+            arvores=math.floor(co2_total / self.CO2_POR_ARVORE_KG),
+            combustivel_litros=round(co2_total * self.FATOR_CO2_PARA_LITROS),
+            horas_led=round(co2_total * self.FATOR_CO2_PARA_LED_HORAS),
+            co2_total_kg=round(co2_total),
+        )
 
     def add_points(self, email: str, points: int) -> AddPointsResponse:
         user = self._get_user_by_email_or_404(email)
