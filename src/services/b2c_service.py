@@ -110,7 +110,7 @@ class B2CService:
             arvores=math.floor(co2_total / self.CO2_POR_ARVORE_KG),
             combustivel_litros=round(co2_total * self.FATOR_CO2_PARA_LITROS),
             horas_led=round(co2_total * self.FATOR_CO2_PARA_LED_HORAS),
-            co2_total_kg=round(co2_total, 4),
+            co2_total_kg=round(co2_total),
         )
 
     def add_points(self, email: str, points: int) -> AddPointsResponse:

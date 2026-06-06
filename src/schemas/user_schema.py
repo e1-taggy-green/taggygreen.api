@@ -32,7 +32,7 @@ class EquivalenciasResponse(BaseModel):
     arvores: int = Field(..., description="Nº de árvores equivalentes pela absorção média anual de CO2")
     combustivel_litros: int = Field(..., description="Litros de gasolina equivalentes ao CO2 poupado")
     horas_led: int = Field(..., description="Horas de iluminação LED equivalentes ao CO2 poupado")
-    co2_total_kg: float = Field(..., description="Volume total bruto de CO2 poupado (kg)")
+    co2_total_kg: int = Field(..., description="Volume total bruto de CO2 poupado (kg)")
 
 
 class AddPointsRequest(BaseModel):
