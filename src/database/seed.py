@@ -50,11 +50,13 @@ def _seed_vehicles(db: Session, faker: Faker, users: list[User]) -> list[Vehicle
             v_type = "truck" if i % 2 == 0 else "car"
             vehicles.append(Vehicle(license_plate=f"B2B-{1000+i}", vehicle_type=v_type, user_id=demo_b2b.id))
 
+    # Filtra os usuários demo para que veículos aleatórios não poluam seus dados
+    usuarios_aleatorios = [u for u in users if u.email not in ("teste.b2c@taggy.com", "teste.b2b@taggy.com")]
     for _ in range(30):
         vehicle = Vehicle(
             license_plate=faker.license_plate(),
             vehicle_type=random.choice(vehicle_types),
-            user_id=random.choice(users).id
+            user_id=random.choice(usuarios_aleatorios).id
         )
         vehicles.append(vehicle)
     db.add_all(vehicles)
