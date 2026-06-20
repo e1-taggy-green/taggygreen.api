@@ -107,9 +107,9 @@ def _seed_events(db: Session, esg_engine: ESGEngine, vehicles: list[Vehicle], fa
     # 1. 100 Eventos para Demo B2C
     b2c_vehicle = next((v for v in vehicles if v.license_plate == "B2C-0001"), None)
     if b2c_vehicle:
-        for _ in range(100):
+        for _ in range(250):
             date_obj = faker.date_time_between(start_date='-180d', end_date='now')
-            events_batch.append(generate_event(b2c_vehicle, date_obj, occurrences=random.randint(600, 1000)))
+            events_batch.append(generate_event(b2c_vehicle, date_obj))
 
     # 2. 30 Eventos para cada veículo da frota Demo B2B
     b2b_vehicles = [v for v in vehicles if v.license_plate.startswith("B2B-")]
